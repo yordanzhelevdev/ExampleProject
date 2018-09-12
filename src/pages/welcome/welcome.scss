@@ -22,7 +22,9 @@ page-welcome {
   }
   .splash-logo {
     margin: auto;
-    background: url('../assets/img/appicon.png') repeat transparent;
+    background: url('../assets/img/appicon.png') no-repeat rgba(0,0,0,0.6);
+    background-position: center;
+    border-radius: 100%;
     background-size: 100%;
     width: 128px;
     height: 128px;
