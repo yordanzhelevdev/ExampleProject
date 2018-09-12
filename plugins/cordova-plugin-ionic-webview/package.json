@@ -1,27 +1,27 @@
 {
-  "_from": "cordova-plugin-ionic-webview@^2.0.0",
-  "_id": "cordova-plugin-ionic-webview@2.1.3",
+  "_from": "cordova-plugin-ionic-webview@^1.2.1",
+  "_id": "cordova-plugin-ionic-webview@1.2.1",
   "_inBundle": false,
-  "_integrity": "sha512-9wX11sBPFf3KGCMPSuMQZkFSeImyMsHEV9VzdRE7BzVVdidzhgvbD26PL0nPNQl6jru3mjIBMHHefnjd2izINA==",
+  "_integrity": "sha512-35Tu80g74enHV7HnXPDTwaPfObFydsLWyyAo2Eez/ns80UfhwkV99hWeG5jSO3zpPtSY8AVq7la6Z6Ww+4kDkg==",
   "_location": "/cordova-plugin-ionic-webview",
   "_phantomChildren": {},
   "_requested": {
     "type": "range",
     "registry": true,
-    "raw": "cordova-plugin-ionic-webview@^2.0.0",
+    "raw": "cordova-plugin-ionic-webview@^1.2.1",
     "name": "cordova-plugin-ionic-webview",
     "escapedName": "cordova-plugin-ionic-webview",
-    "rawSpec": "^2.0.0",
+    "rawSpec": "^1.2.1",
     "saveSpec": null,
-    "fetchSpec": "^2.0.0"
+    "fetchSpec": "^1.2.1"
   },
   "_requiredBy": [
     "#USER",
     "/"
   ],
-  "_resolved": "https://registry.npmjs.org/cordova-plugin-ionic-webview/-/cordova-plugin-ionic-webview-2.1.3.tgz",
-  "_shasum": "4df8dde4d008dba4b9848e3b2c58a5228a6f5a00",
-  "_spec": "cordova-plugin-ionic-webview@^2.0.0",
+  "_resolved": "https://registry.npmjs.org/cordova-plugin-ionic-webview/-/cordova-plugin-ionic-webview-1.2.1.tgz",
+  "_shasum": "6d2162a2b1c593de436359d0746afc28b6a28d57",
+  "_spec": "cordova-plugin-ionic-webview@^1.2.1",
   "_where": "C:\\Users\\hp\\Desktop\\ExampleProject",
   "author": {
     "name": "Ionic Team"
@@ -33,16 +33,8 @@
   "deprecated": false,
   "description": "The official Ionic's WKWebView Engine Plugin",
   "devDependencies": {
-    "np": "^3.0.4",
+    "np": "^2.16.0",
     "sync-cordova-xml": "^0.4.0"
-  },
-  "engines": {
-    "cordovaDependencies": {
-      "2.0.0": {
-        "cordova-android": ">=6.4.0",
-        "cordova-ios": ">=4.0.0-dev"
-      }
-    }
   },
   "homepage": "https://github.com/ionic-team/cordova-plugin-ionic-webview#readme",
   "keywords": [
@@ -61,5 +53,5 @@
     "sync_plugin_xml": "sync-cordova-xml package.json plugin.xml --output=plugin.xml",
     "version": "npm run sync_plugin_xml && git add plugin.xml"
   },
-  "version": "2.1.3"
+  "version": "1.2.1"
 }

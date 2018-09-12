@@ -31,9 +31,6 @@
 
 #define CDV_BRIDGE_NAME @"cordova"
 #define CDV_IONIC_STOP_SCROLL @"stopScroll"
-#define CDV_SERVER_PATH @"serverBasePath"
-#define LAST_BINARY_VERSION_CODE @"lastBinaryVersionCode"
-#define LAST_BINARY_VERSION_NAME @"lastBinaryVersionName"
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
 
@@ -108,12 +105,6 @@
 @property (nonatomic, readwrite) NSString *CDV_LOCAL_SERVER;
 @end
 
-// expose private configuration value required for background operation
-@interface WKWebViewConfiguration ()
-
-@property (setter=_setAlwaysRunsAtForegroundPriority:, nonatomic) bool _alwaysRunsAtForegroundPriority;
-
-@end
 
 
 // see forwardingTargetForSelector: selector comment for the reason for this pragma
@@ -134,6 +125,9 @@
             return nil;
         }
 
+        //Set default Server String
+        self.CDV_LOCAL_SERVER = @"http://localhost:8080";
+
         // add to keyWindow to ensure it is 'active'
         [UIApplication.sharedApplication.keyWindow addSubview:self.engineWebView];
 
@@ -141,88 +135,22 @@
     }
     return self;
 }
-
-- (void)initWebServer
+- (void)initWebServer:(NSDictionary*)settings
 {
-    [GCDWebServer setLogLevel: kGCDWebServerLoggingLevel_Warning];
-    self.webServer = [[GCDWebServer alloc] init];
-
-    NSString * wwwPath = [[NSBundle mainBundle] pathForResource:@"www" ofType: nil];
-
-    NSUserDefaults* userDefaults = [NSUserDefaults standardUserDefaults];
-    NSString * persistedPath = [userDefaults objectForKey:CDV_SERVER_PATH];
-    if (![self isNewBinary] && persistedPath && ![persistedPath isEqualToString:@""]) {
-        NSString *libPath = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) objectAtIndex:0];
-        NSString * cordovaDataDirectory = [libPath stringByAppendingPathComponent:@"NoCloud"];
-        NSString * snapshots = [cordovaDataDirectory stringByAppendingPathComponent:@"ionic_built_snapshots"];
-        wwwPath = [snapshots stringByAppendingPathComponent:[persistedPath lastPathComponent]];
-    }
-
-    [self updateBindPath];
-    [self setServerPath:wwwPath];
-
-    [self startServer];
-}
-
--(BOOL) isNewBinary
-{
-    NSString * versionCode = [[NSBundle mainBundle] infoDictionary][@"CFBundleVersion"];
-    NSString * versionName = [[NSBundle mainBundle] infoDictionary][@"CFBundleShortVersionString"];
-    NSUserDefaults * prefs = [NSUserDefaults standardUserDefaults];
-    NSString * lastVersionCode = [prefs stringForKey:LAST_BINARY_VERSION_CODE];
-    NSString * lastVersionName = [prefs stringForKey:LAST_BINARY_VERSION_NAME];
-    if (![versionCode isEqualToString:lastVersionCode] || ![versionName isEqualToString:lastVersionName]) {
-        [prefs setObject:versionCode forKey:LAST_BINARY_VERSION_CODE];
-        [prefs setObject:versionName forKey:LAST_BINARY_VERSION_NAME];
-        [prefs setObject:@"" forKey:CDV_SERVER_PATH];
-        [prefs synchronize];
-        return YES;
-    }
-    return NO;
-}
-
--(void)updateBindPath
-{
-    NSDictionary * settings = self.commandDelegate.settings;
-    //bind to designated hostname or default to localhost
-    NSString *bind = [settings cordovaSettingForKey:@"WKBind"];
-    if(bind == nil){
-        bind = @"localhost";
-    }
-
-    //bind to designated port or default to 8080
+        [GCDWebServer setLogLevel: kGCDWebServerLoggingLevel_Warning];
+        self.webServer = [[GCDWebServer alloc] init];
+        [self.webServer addGETHandlerForBasePath:@"/" directoryPath:@"/" indexFilename:nil cacheAge:3600 allowRangeRequests:YES];
     int portNumber = [settings cordovaFloatSettingForKey:@"WKPort" defaultValue:8080];
-
-    //set the local server name
-    self.CDV_LOCAL_SERVER = [NSString stringWithFormat:@"http://%@:%d", bind, portNumber];
-}
-
--(void)startServer
-{
-    NSDictionary * settings = self.commandDelegate.settings;
-
-    //bind to designated port or default to 8080
-    int portNumber = [settings cordovaFloatSettingForKey:@"WKPort" defaultValue:8080];
-
-    //enable suspend in background if set in config
-    BOOL suspendInBackground = [settings cordovaBoolSettingForKey:@"WKSuspendInBackground" defaultValue:YES];
-    int waitTime = 10;
-
-    //extend default connection coalescing time when background enabled
-    if(!suspendInBackground){
-        NSLog(@"CDVWKWebViewEngine: Suspend in background disabled");
-        waitTime = 60;
+    if(portNumber != 8080){
+        self.CDV_LOCAL_SERVER = [NSString stringWithFormat:@"http://localhost:%d", portNumber];
     }
-
-    NSDictionary *options = @{
-                              GCDWebServerOption_AutomaticallySuspendInBackground: @(suspendInBackground),
-                              GCDWebServerOption_ConnectedStateCoalescingInterval: @(waitTime),
-                              GCDWebServerOption_Port: @(portNumber),
-                              GCDWebServerOption_BindToLocalhost: @(YES),
-                              GCDWebServerOption_ServerName: @"Ionic"
-                              };
-
-    [self.webServer startWithOptions:options error:nil];
+        NSDictionary *options = @{
+                                  GCDWebServerOption_Port: @(portNumber),
+                                  GCDWebServerOption_BindToLocalhost: @(YES),
+                                  GCDWebServerOption_ServerName: @"Ionic"
+                                  };
+    
+        [self.webServer startWithOptions:options error:nil];
 }
 
 - (WKWebViewConfiguration*) createConfigurationFromSettings:(NSDictionary*)settings
@@ -242,9 +170,6 @@
     if (settings == nil) {
         return configuration;
     }
-
-    //required to stop wkwebview suspending in background too eagerly (as used in background mode plugin)
-    configuration._alwaysRunsAtForegroundPriority = ![settings cordovaBoolSettingForKey:@"WKSuspendInBackground" defaultValue:YES];
     configuration.allowsInlineMediaPlayback = [settings cordovaBoolSettingForKey:@"AllowInlineMediaPlayback" defaultValue:YES];
     configuration.suppressesIncrementalRendering = [settings cordovaBoolSettingForKey:@"SuppressesIncrementalRendering" defaultValue:NO];
     configuration.allowsAirPlayForMediaPlayback = [settings cordovaBoolSettingForKey:@"MediaPlaybackAllowsAirPlay" defaultValue:YES];
@@ -255,7 +180,7 @@
 {
     // viewController would be available now. we attempt to set all possible delegates to it, by default
     NSDictionary* settings = self.commandDelegate.settings;
-    [self initWebServer];
+    [self initWebServer:settings];
 
     self.uiDelegate = [[CDVWKWebViewUIDelegate alloc] initWithTitle:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"]];
 
@@ -432,12 +357,7 @@ static void * KVOContext = &KVOContext;
 - (id)loadRequest:(NSURLRequest *)request
 {
     if (request.URL.fileURL) {
-        NSURL* startURL = [NSURL URLWithString:((CDVViewController *)self.viewController).startPage];
-        NSString* startFilePath = [self.commandDelegate pathForResource:[startURL path]];
         NSURL *url = [[NSURL URLWithString:self.CDV_LOCAL_SERVER] URLByAppendingPathComponent:request.URL.path];
-        if ([request.URL.path isEqualToString:startFilePath]) {
-            url = [NSURL URLWithString:self.CDV_LOCAL_SERVER];
-        }
         if(request.URL.query) {
             url = [NSURL URLWithString:[@"?" stringByAppendingString:request.URL.query] relativeToURL:url];
         }
@@ -550,7 +470,6 @@ static void * KVOContext = &KVOContext;
         NSLog(@"CDVWKWebViewEngine: WK plugin can not be loaded: %@", error);
         return nil;
     }
-    source = [source stringByAppendingString:[NSString stringWithFormat:@"window.WEBVIEW_SERVER_URL = '%@';", self.CDV_LOCAL_SERVER]];
 
     return [[WKUserScript alloc] initWithSource:source
                                   injectionTime:WKUserScriptInjectionTimeAtDocumentStart
@@ -718,6 +637,7 @@ static void * KVOContext = &KVOContext;
     return NO;
 }
 
+
 - (void) webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction*)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
 {
     NSURL* url = [navigationAction.request URL];
@@ -756,6 +676,7 @@ static void * KVOContext = &KVOContext;
         }
     }
 
+
     if (shouldAllowRequest) {
         NSString *scheme = url.scheme;
         if ([scheme isEqualToString:@"tel"] ||
@@ -772,58 +693,6 @@ static void * KVOContext = &KVOContext;
     } else {
         decisionHandler(WKNavigationActionPolicyCancel);
     }
-}
-
--(void)getServerBasePath:(CDVInvokedUrlCommand*)command
-{
-  [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:self.basePath]  callbackId:command.callbackId];
-}
-
--(void)setServerBasePath:(CDVInvokedUrlCommand*)command
-{
-  NSString * path = [command argumentAtIndex:0];
-  [self setServerPath:path];
-  [(WKWebView*)_engineWebView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:self.CDV_LOCAL_SERVER]]];
-}
-
--(void)setServerPath:(NSString *) path
-{
-    self.basePath = path;
-    BOOL restart = [self.webServer isRunning];
-    if (restart) {
-        [self.webServer stop];
-    }
-
-    __block NSString* serverUrl = self.CDV_LOCAL_SERVER;
-    [self.webServer addGETHandlerForBasePath:@"/" directoryPath:path indexFilename:((CDVViewController *)self.viewController).startPage cacheAge:0 allowRangeRequests:YES];
-    [self.webServer addHandlerForMethod:@"GET" pathRegex:@"_file_/" requestClass:GCDWebServerFileRequest.class asyncProcessBlock:^(__kindof GCDWebServerRequest * _Nonnull request, GCDWebServerCompletionBlock  _Nonnull completionBlock) {
-        NSString *urlToRemove = [serverUrl stringByAppendingString:@"/_file_"];
-        NSString *absUrl = [[[request URL] absoluteString] stringByReplacingOccurrencesOfString:urlToRemove withString:@""];
-
-        NSRange range = [absUrl rangeOfString:@"?"];
-        if (range.location != NSNotFound) {
-            absUrl = [absUrl substringToIndex:range.location];
-        }
-        NSFileManager *fileManager = [NSFileManager defaultManager];
-        if (![fileManager fileExistsAtPath:absUrl]) {
-            GCDWebServerResponse* response = [GCDWebServerResponse responseWithStatusCode:kGCDWebServerHTTPStatusCode_NotFound];;
-            completionBlock(response);
-        } else {
-            GCDWebServerFileResponse *response = [GCDWebServerFileResponse responseWithFile:absUrl byteRange:request.byteRange];
-            [response setValue:@"bytes" forAdditionalHeader:@"Accept-Ranges"];
-            completionBlock(response);
-        }
-    }];
-    if (restart) {
-        [self startServer];
-    }
-}
-
--(void)persistServerBasePath:(CDVInvokedUrlCommand*)command
-{
-    NSUserDefaults* userDefaults = [NSUserDefaults standardUserDefaults];
-    [userDefaults setObject:[self.basePath lastPathComponent] forKey:CDV_SERVER_PATH];
-    [userDefaults synchronize];
 }
 
 @end
@@ -847,3 +716,4 @@ static void * KVOContext = &KVOContext;
 }
 
 @end
+
